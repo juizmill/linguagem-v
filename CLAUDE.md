@@ -29,3 +29,10 @@ a regra acima), a IA deve:
 Só depois disso a aula seguinte deve começar. Nunca acumular trabalho de
 mais de uma aula sem commit/PR, e nunca iniciar a próxima aula com
 alterações da aula anterior ainda pendentes.
+
+## Regra do README do projeto
+
+Sempre que uma alteração tornar o `README.md` da raiz do projeto
+desatualizado (nova sintaxe suportada, mudança de comando de build/teste,
+nova extensão de arquivo, nova estrutura de crates, etc.), atualizar o
+`README.md` junto com essa alteração — não deixar para uma aula futura.
