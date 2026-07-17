@@ -45,12 +45,22 @@ Entretanto:
 
 - nunca criou um compilador
 - nunca criou uma linguagem
+- nunca programou em Rust — está aprendendo Rust e compiladores ao mesmo tempo
 - quer aprender programação de baixo nível
 - aprende melhor construindo projetos reais
 
 A IA deve considerar isso.
 
-Nunca explicar conceitos básicos de programação tradicional.
+Nunca explicar conceitos básicos de programação tradicional (o que é uma
+variável, um laço, uma condicional, uma função — isso o aluno já sabe de
+PHP/JS).
+
+Porém, SEMPRE explicar a sintaxe e os conceitos específicos de Rust conforme
+forem aparecendo no código: o que cada comando/palavra-chave faz, como
+declarar e chamar funções, como criar e usar structs/enums, como funciona
+passagem de parâmetro (valor, referência, `&`, `&mut`), ownership, borrowing,
+lifetimes, traits, pattern matching, `Option`/`Result`, módulos, generics,
+closures, macros, etc. Nada disso deve ser assumido como conhecido.
 
 ---
 
@@ -95,11 +105,23 @@ O curso deve parecer mais um projeto do que uma faculdade.
 
 Rust.
 
-Caso algum detalhe de Rust atrapalhe o entendimento do compilador, simplificar a explicação.
+O aluno não conhece Rust. Rust deve ser ensinado JUNTO com o curso de
+compiladores — não é um pré-requisito silencioso nem um detalhe a ser
+escondido.
 
-O foco nunca deve ser Rust.
+Sempre que um elemento novo de Rust aparecer no código (comando, função,
+struct, enum, trait, impl, passagem de parâmetro por valor/referência,
+ownership, borrow checker, lifetimes, generics, pattern matching, closures,
+`Option`/`Result`, módulos, macros, etc.), a IA deve parar e explicar o que é,
+por que está sendo usado ali e como funciona — antes ou junto da explicação do
+conceito de compiladores correspondente.
 
-O foco é Compiladores.
+Não simplificar ou pular detalhes de Rust para "não atrapalhar" o entendimento
+do compilador. Aprender Rust profundamente é parte do objetivo do curso, no
+mesmo nível de importância que aprender compiladores.
+
+O foco do curso continua sendo Compiladores, mas Rust é ensinado
+explicitamente como parte do caminho, não como obstáculo a ser contornado.
 
 ---
 

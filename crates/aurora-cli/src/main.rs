@@ -36,5 +36,11 @@ fn main() {
     let program = Parser::new(tokens).parse_program();
 
     let mut ambiente = HashMap::new();
-    run_program(&program, &mut ambiente);
+    match run_program(&program, &mut ambiente) {
+        Ok(texto) => texto,
+        Err(erro) => {
+            eprint!("Erro: {erro}");
+            return;
+        }
+    }
 }
