@@ -127,6 +127,33 @@ impl Parser {
                 Stmt::Echo(value)
             }
 
+            Some(Token::Let) => {
+                self.advance(); // consome o "let" em si (já sabíamos que era Let, pelo match acima)
+
+                // Depois do "let" tem que vir um identificador: o nome da variável
+                // (ex: o "y" de "let y = 10;"). advance() devolve Option<Token>;
+                // .unwrap() é seguro aqui pelo mesmo motivo do parse_primary — se
+                // chegamos até este ponto, ainda sobra pelo menos o Eof na fila.
+                let nome = match self.advance().unwrap() {
+                    // Igual ao "Token::Ident(nome) => Expr::Ident(nome)" do
+                    // parse_primary: o match confirma que é um Ident E extrai a
+                    // String de dentro dele pra variável "nome", ao mesmo tempo.
+                    Token::Ident(nome) => nome,
+                    outro => panic!("esperava identificador depois de 'let', encontrei {outro:?}"),
+                };
+
+                self.expect(Token::EqualsTo); // exige o "="
+                let value = self.parse_expression(); // a expressão do lado direito (ex: 10)
+                self.expect(Token::Semicolon); // exige o ";"
+
+                // Variante struct: cada campo declarado em "Stmt::Let { name, value }"
+                // (ast.rs) precisa aparecer aqui. "name: nome" escreve o par
+                // completo porque a variável local se chama "nome" (diferente do
+                // campo "name"); "value" sozinho é o atalho (field init shorthand)
+                // porque a variável local já se chama igual ao campo.
+                Stmt::Let { name: nome, value }
+            }
+
             // Token::Ident(nome): desempacota o nome de dentro do token, igual
             // fizemos no parse_primary — "nome" só existe dentro desse braço.
             Some(Token::Ident(nome)) => {

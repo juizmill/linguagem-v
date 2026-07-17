@@ -1,0 +1,4 @@
+let v = 10 / 2;
+echo v;
+v = v +10;
+echo v;

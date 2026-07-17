@@ -21,6 +21,7 @@ pub enum BinOp {
 #[derive(Debug, PartialEq)]
 pub enum Stmt {
     Assign { name: String, value: Expr },
+    Let { name: String, value: Expr },
     Echo(Expr),
 }
 

@@ -10,6 +10,7 @@ pub enum Token {
     Divide,        // operador /
     Multiply,      // operador *
     EqualsTo,      // operador =
+    Let,           // Define uma variavel let x=1;
     Semicolon,     // delimitador do final da instrução por exemplo ;
     Echo,          // palavra-chave
     Eof,           // fim do token
@@ -94,6 +95,8 @@ impl Lexer {
 
         if text == "echo" {
             Token::Echo
+        } else if text == "let" {
+            Token::Let
         } else {
             Token::Ident(text)
         }

@@ -16,3 +16,16 @@ feitas, respostas dele, correções de raciocínio — para que o arquivo sirva
 como material de revisão fiel ao que ele aprendeu, e não só um roteiro
 genérico. Atualize o arquivo da aula ao final da conversa/sessão, não deixe
 para depois.
+
+## Regra de commit e PR ao final de cada aula
+
+Ao final de cada aula (depois de documentar o `README.md` da aula, conforme
+a regra acima), a IA deve:
+
+1. Fazer commit de todas as alterações pendentes (código + documentação da
+   aula).
+2. Criar um Pull Request com essas mudanças.
+
+Só depois disso a aula seguinte deve começar. Nunca acumular trabalho de
+mais de uma aula sem commit/PR, e nunca iniciar a próxima aula com
+alterações da aula anterior ainda pendentes.
