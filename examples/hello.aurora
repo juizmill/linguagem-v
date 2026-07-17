@@ -1,0 +1,4 @@
+x = 1 + 2 * 3;
+echo x;
+y = x - 1;
+echo y;

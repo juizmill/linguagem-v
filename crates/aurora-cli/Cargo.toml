@@ -1,0 +1,13 @@
+[package]
+name = "aurora-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "aurora"
+path = "src/main.rs"
+
+[dependencies]
+aurora-lexer = { path = "../aurora-lexer" }
+aurora-parser = { path = "../aurora-parser" }
+aurora-interpreter = { path = "../aurora-interpreter" }
