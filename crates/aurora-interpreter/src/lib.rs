@@ -9,18 +9,115 @@ pub enum Value {
     Float(f64),
 }
 
-pub fn eval_expr(expr: &Expr, env: &HashMap<String, Value>) -> Result<Value, String> {
+// Aula 08 — Escopos.
+// "pai: Option<Box<Environment>>" -- um escopo pode ou não ter um escopo
+// "de fora" (o global não tem). Box porque um Environment não pode conter
+// outro Environment "cru" dentro dele (tamanho infinito).
+pub struct Environment {
+    valores: HashMap<String, Value>,
+    pai: Option<Box<Environment>>,
+}
+
+impl Environment {
+    // Cria o escopo global: sem pai, sem nenhuma variável ainda.
+    pub fn new() -> Self {
+        Self {
+            valores: HashMap::new(),
+            pai: None,
+        }
+    }
+
+    // Procura "name" no próprio escopo primeiro; se não achar E existir um
+    // "pai", procura nele (recursivo). Se não achar em lugar nenhum, None.
+    // Dica: "match &self.pai { Some(pai) => ..., None => ... }" -- parecido
+    // com o "soma_todos" do No/lista ligada.
+    pub fn get(&self, name: &str) -> Option<Value> {
+        // self.valores.get(name) devolve Option<&Value> -- .clone() tira
+        // uma cópia de dentro da referência, igual já fazia em eval_expr
+        // pro Expr::Ident (Some(valor) => Ok(valor.clone())).
+        match self.valores.get(name) {
+            Some(valor) => Some(valor.clone()),
+
+            // Não achou aqui. Existe um escopo "de fora" (self.pai)?
+            None => match &self.pai {
+                // "pai" aqui é &Box<Environment> (referência a uma caixa
+                // contendo um Environment). Box "atravessa sozinho" --
+                // chamar .get(name) nele funciona sem nenhuma conversão
+                // manual, igual Box<Expr> atravessava em eval_expr.
+                // Isso é a MESMA função se chamando de novo (recursão),
+                // só que agora em cima do escopo pai -- exatamente como
+                // soma_todos(prox) se chamava de novo em cima do próximo
+                // nó da lista.
+                Some(pai) => pai.get(name),
+
+                // Não tem pai (chegou no escopo global) e não achou lá
+                // nele também: a variável não existe em lugar nenhum.
+                None => None,
+            },
+        }
+    }
+
+    // "let" de sempre: grava no PRÓPRIO escopo, sem checar se já existia
+    // (mesma regra que Stmt::Let já tinha antes de existir Environment).
+    pub fn define(&mut self, name: String, value: Value) {
+        self.valores.insert(name, value);
+    }
+
+    // "=" (reatribuição). Diferente de "get": aqui precisamos ESCREVER no
+    // nível da cadeia onde a variável foi declarada -- que pode não ser o
+    // escopo atual. Por isso "&mut self" (precisa de permissão de escrita)
+    // e Result<(), String> em vez de Option<Value> (mesma ideia do
+    // Stmt::Assign de antes: se não existir em NENHUM escopo, é erro, não
+    // "silenciosamente não faz nada").
+    pub fn assign(&mut self, name: &str, value: Value) -> Result<(), String> {
+        // contains_key só CONSULTA (não precisa de &mut pra isso, mas o
+        // método inteiro já pediu &mut self porque o insert() logo abaixo
+        // vai precisar). Igual o "if !env.contains_key(name)" que já
+        // existia em eval_stmt, só que agora perguntando só ao ESCOPO
+        // ATUAL primeiro.
+        if self.valores.contains_key(name) {
+            // Achou aqui mesmo: atualiza neste nível e para -- não sobe
+            // pro pai, porque a variável mais "próxima" (a deste escopo)
+            // é a que "= " deve afetar, não uma de mesmo nome lá em cima.
+            self.valores.insert(name.to_string(), value);
+            return Ok(());
+        }
+
+        // Não achou nesta valores. Existe um "pai" pra tentar?
+        // self.pai é Option<Box<Environment>>. Pra RECURSÃO MUTÁVEL
+        // (chamar .assign de novo, agora podendo escrever no pai),
+        // precisamos de uma &mut Environment, não só uma &Environment
+        // como o "match &self.pai" do get() usava.
+        // ".as_deref_mut()" faz exatamente essa conversão: de
+        // "&mut Option<Box<Environment>>" (o que vem de self.pai quando
+        // self já é &mut) para "Option<&mut Environment>" -- ele
+        // "atravessa" o Box e te dá uma referência mutável pro que tem
+        // dentro, sem tirar o dono (self.pai continua sendo o dono do Box).
+        match self.pai.as_deref_mut() {
+            // "pai" aqui já é &mut Environment: chamar .assign(name, value)
+            // nele é a MESMA função se chamando de novo, subindo um nível
+            // -- só que agora com permissão de escrita, não só leitura.
+            Some(pai) => pai.assign(name, value),
+
+            // Chegou no escopo global (sem pai) e não achou em lugar
+            // nenhum da cadeia: mesma mensagem de erro que Stmt::Assign
+            // já usava direto no HashMap.
+            None => Err(format!(
+                "variável '{name}' não declarada -- use 'let' antes de atribuir"
+            )),
+        }
+    }
+}
+
+pub fn eval_expr(expr: &Expr, env: &Environment) -> Result<Value, String> {
     match expr {
         Expr::Int(n) => Ok(Value::Int(*n)),
         Expr::Float(n) => Ok(Value::Float(*n)),
         Expr::Ident(name) => match env.get(name) {
-            Some(valor) => Ok(valor.clone()),
+            Some(valor) => Ok(valor),
             None => Err(format!("variável não definida: {name}")),
         },
         Expr::Binary { left, op, right } => {
-            // left/right são Box<Expr>; Rust "enxerga através" do Box
-            // automaticamente aqui, então dá pra passar direto pra eval_expr
-            // (que espera &Expr) sem nenhuma conversão manual.
             let valor_esquerdo = eval_expr(left, env)?;
             let valor_direito = eval_expr(right, env)?;
             Ok(eval_binary(valor_esquerdo, op, valor_direito))
@@ -28,7 +125,6 @@ pub fn eval_expr(expr: &Expr, env: &HashMap<String, Value>) -> Result<Value, Str
     }
 }
 
-// Recebe os dois valores JÁ calculados (não a árvore) e decide o resultado.
 fn eval_binary(left: Value, op: &BinOp, right: Value) -> Value {
     // match numa tupla (left, right): compara os dois valores AO MESMO TEMPO.
     // Só cai no primeiro braço se os dois forem Int; qualquer outra combinação
@@ -56,8 +152,6 @@ fn eval_binary(left: Value, op: &BinOp, right: Value) -> Value {
     }
 }
 
-// "as f64": conversão explícita de tipo numérico (equivalente ao cast (float)
-// do PHP). Int(3) as f64 vira 3.0; Float(n) já é f64, só devolve.
 fn to_f64(value: Value) -> f64 {
     match value {
         Value::Int(n) => n as f64,
@@ -72,78 +166,30 @@ fn format_value(value: &Value) -> String {
     }
 }
 
-// Result<(), String>: "()" é o tipo "nada" (o void do PHP) -- eval_stmt não
-// tem valor útil pra devolver quando dá certo, só precisa avisar se deu Err.
-pub fn eval_stmt(stmt: &Stmt, env: &mut HashMap<String, Value>) -> Result<(), String> {
+pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<(), String> {
     match stmt {
         Stmt::Assign { name, value } => {
-            // "=" é REATRIBUIÇÃO: só faz sentido se "name" já foi declarado
-            // com "let" antes. contains_key só CONSULTA o HashMap (não altera
-            // nada) -- por isso pode ser chamado mesmo com env sendo &mut:
-            // "&mut" dá PERMISSÃO de escrever, não obriga a escrever toda vez.
-            // "name" aqui já é &String (veio do destructuring de &Stmt), então
-            // passa direto pro contains_key, sem precisar de .clone().
-            if !env.contains_key(name) {
-                // "return" explícito: sai da função AGORA, de dentro de um
-                // "if" (não é a última linha do bloco, por isso não dá pra
-                // só "deixar a expressão pendurada" como no Ok(()) lá embaixo
-                // -- precisa do "return" pra interromper o resto do braço).
-                return Err(format!(
-                    "variável '{name}' não declarada -- use 'let' antes de atribuir"
-                ));
-            }
-
-            // "value" aqui é um &Expr (a árvore ainda não calculada, ex: 1 + 2).
-            // eval_expr calcula ela e devolve Result<Value, String>; o "?"
-            // desembrulha o Ok(valor) OU já sai desta função com o mesmo Err,
-            // sem precisar de match manual (mesma ideia do "dobro"/"analisa").
             let valor = eval_expr(value, env)?;
-
-            // env.insert(chave, valor): grava no HashMap, igual $env['x'] = valor;
-            // "name" é &String (emprestado da árvore) -- o HashMap precisa ser
-            // DONO da própria chave, então .clone() faz uma cópia da string
-            // só pra ele guardar (a árvore continua com a sua própria cópia).
-            env.insert(name.clone(), valor);
-
-            // Ok(()): deu tudo certo, e não tem valor nenhum pra devolver além
-            // disso -- daí o "()" vazio dentro do Ok. SEM ";" no final: essa
-            // linha precisa ser a ÚLTIMA EXPRESSÃO do braço, senão o bloco
-            // "cai pro final" sem valor (o erro que você teve antes).
+            env.assign(name, valor)?;
             Ok(())
         }
 
         Stmt::Let { name, value } => {
-            // "let" é DECLARAÇÃO: sempre grava, sem checar se "name" já
-            // existia -- diferente do Assign. (Se já existia, isso troca o
-            // valor antigo; formalizar "erro ao redeclarar" fica pra depois,
-            // se algum dia você decidir que faz sentido pra Aurora.)
             let valor = eval_expr(value, env)?;
-            env.insert(name.clone(), valor);
+            env.define(name.clone(), valor);
             Ok(())
         }
 
         Stmt::Echo(expr) => {
             let valor = eval_expr(expr, env)?;
-
-            // format_value transforma o Value num texto "limpo" (sem o nome
-            // da variante); println!("{}", ...) imprime esse texto no
-            // terminal, com quebra de linha no final -- igual um echo do PHP.
             println!("{}", format_value(&valor));
             Ok(())
         }
     }
 }
 
-pub fn run_program(program: &Vec<Stmt>, env: &mut HashMap<String, Value>) -> Result<(), String> {
-    // "for stmt in program": percorre cada Stmt da lista, na ordem, chamando
-    // eval_stmt pra cada um. Como cada eval_stmt pode ALTERAR o env (no caso
-    // do Assign/Let), passamos env pra cada chamada -- é o mesmo HashMap
-    // sendo atualizado statement após statement (por isso "x = 1;" antes de
-    // "echo x;" funciona: quando o echo roda, o x já está no env).
+pub fn run_program(program: &Vec<Stmt>, env: &mut Environment) -> Result<(), String> {
     for stmt in program {
-        // "?" aqui também: se QUALQUER statement do programa der erro, o
-        // "for" para nesse ponto (não roda o resto do programa) e
-        // run_program já devolve esse mesmo Err pra quem chamou (o main).
         eval_stmt(stmt, env)?;
     }
 
@@ -156,8 +202,8 @@ mod tests {
 
     #[test]
     fn eval_ident_busca_no_environment() -> Result<(), String> {
-        let mut env = HashMap::new();
-        env.insert("x".to_string(), Value::Int(3));
+        let mut env = Environment::new();
+        env.define("x".to_string(), Value::Int(3));
 
         let resultado = eval_expr(&Expr::Ident("x".to_string()), &env)?;
 
@@ -168,7 +214,7 @@ mod tests {
 
     #[test]
     fn eval_binary_int_com_int_continua_int() -> Result<(), String> {
-        let env = HashMap::new();
+        let env = Environment::new();
         let expr = Expr::Binary {
             left: Box::new(Expr::Int(1)),
             op: BinOp::Add,
@@ -181,7 +227,7 @@ mod tests {
 
     #[test]
     fn eval_binary_promove_pra_float_quando_mistura() -> Result<(), String> {
-        let env = HashMap::new();
+        let env = Environment::new();
         let expr = Expr::Binary {
             left: Box::new(Expr::Int(1)),
             op: BinOp::Add,
@@ -209,10 +255,10 @@ mod tests {
             Stmt::Echo(Expr::Ident("x".to_string())),
         ];
 
-        let mut env = HashMap::new();
+        let mut env = Environment::new();
         run_program(&program, &mut env)?;
 
-        assert_eq!(env.get("x"), Some(&Value::Int(3)));
+        assert_eq!(env.get("x"), Some(Value::Int(3)));
 
         Ok(())
     }

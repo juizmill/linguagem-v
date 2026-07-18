@@ -17,9 +17,9 @@ impl Parser {
         Parser { tokens, pos: 0 }
     }
 
-    fn is_at_end(&self) -> bool {
-        self.pos >= self.tokens.len()
-    }
+    // fn is_at_end(&self) -> bool {
+    //     self.pos >= self.tokens.len()
+    // }
 
     fn peek(&self) -> Option<Token> {
         self.tokens.get(self.pos).cloned()
