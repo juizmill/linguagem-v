@@ -5,6 +5,7 @@ pub enum Token {
     Float(f64),    // Literais para salvar valor ponto flutuante
     Int(i64),      // Literal para salvar valores inteiros
     Ident(String), // Identificadores: nomes de variável
+    Str(String),   // Literais de string
     Plus,          // operador +
     Subtract,      // operador -
     Divide,        // operador /
@@ -56,18 +57,18 @@ impl Lexer {
     }
 
     fn scan_number(&mut self, first: char) -> Token {
-        let mut is_float = false; // precisa de "mut": vamos reatribuir mais abaixo
+        let mut is_float = false;
         let mut text = String::new();
-        text.push(first); // o "first" já foi consumido pelo next_token, não pode ficar de fora
+        text.push(first);
 
         while let Some(c) = self.peek() {
             if c.is_ascii_digit() {
                 text.push(c);
-                self.advance(); // essencial: sem isso pos nunca anda e o laço nunca termina
+                self.advance();
             } else if c == '.' && !is_float {
                 is_float = true;
                 text.push(c);
-                self.advance(); // idem aqui
+                self.advance();
             } else {
                 break;
             }
@@ -78,6 +79,22 @@ impl Lexer {
         } else {
             Token::Int(text.parse().unwrap())
         }
+    }
+
+    fn scan_string(&mut self) -> Token {
+        let mut text = String::new();
+
+        while let Some(c) = self.peek() {
+            if c == '"' {
+                self.advance();
+                return Token::Str(text);
+            }
+
+            text.push(c);
+            self.advance();
+        }
+
+        panic!("string não fechada: \"{text}");
     }
 
     fn scan_identifier(&mut self, first: char) -> Token {
@@ -103,26 +120,18 @@ impl Lexer {
     }
 
     fn next_token(&mut self) -> Token {
-        // Enquanto existir um char (Some(c)) e ele for espaço, consome e continua
-        // "while let Some(c) = x" é um laço que só roda enquanto X for Some(algo)
-        // ele já "desembrulha" o Option pra usar "c" dentro do laço
         while let Some(c) = self.peek() {
             if c.is_whitespace() {
-                self.advance(); // consome o espaço e descarta
+                self.advance();
             } else {
-                break; // achou algo que não é espaço, para o laço
+                break;
             }
         }
 
-        // depois de pular os espaços se não sobrou nada é o fim
         if self.is_at_end() {
             return Token::Eof;
         }
 
-        // consumir o próximo char (novo "c", só existe daqui pra baixo) e
-        // decidir com match qual Token ele é.
-        // .unwrap() é seguro aqui: acabamos de checar is_at_end() acima,
-        // então temos certeza de que existe um char pra consumir.
         let c = self.advance().unwrap();
 
         let token = match c {
@@ -132,12 +141,13 @@ impl Lexer {
             '*' => Token::Multiply,
             '=' => Token::EqualsTo,
             ';' => Token::Semicolon,
-            c if c.is_ascii_digit() => self.scan_number(c), // match guard: só entra aqui se for dígito
+            '"' => self.scan_string(),
+            c if c.is_ascii_digit() => self.scan_number(c),
             c if c.is_alphabetic() && c.is_alphanumeric() => self.scan_identifier(c),
             _ => panic!("caractere inesperado: {c}"),
         };
 
-        token // sem ";" no final: essa é a forma de "devolver" o valor da função
+        token
     }
 
     pub fn tokenize(&mut self) -> Vec<Token> {
@@ -145,7 +155,7 @@ impl Lexer {
         loop {
             let token = self.next_token();
             let eof = token == Token::Eof;
-            tokens.push(token); // inclui o próprio Eof no vetor final, de propósito
+            tokens.push(token);
             if eof {
                 break;
             }
@@ -210,6 +220,46 @@ mod tests {
         assert_eq!(lexer.next_token(), Token::Int(123));
         assert_eq!(lexer.next_token(), Token::Float(12.5));
         assert_eq!(lexer.next_token(), Token::Eof);
+    }
+
+    #[test]
+    fn next_token_reconhece_string() {
+        let mut lexer = Lexer::new("\"ola\"");
+
+        assert_eq!(lexer.next_token(), Token::Str("ola".to_string()));
+        assert_eq!(lexer.next_token(), Token::Eof);
+    }
+
+    #[test]
+    fn next_token_reconhece_string_vazia() {
+        // "" -- string sem nenhum caractere entre as aspas. O laço do
+        // scan_string precisa achar o "de fechamento" já na primeira
+        // olhada (peek), sem nunca entrar no braço que dá push.
+        let mut lexer = Lexer::new("\"\"");
+
+        assert_eq!(lexer.next_token(), Token::Str("".to_string()));
+        assert_eq!(lexer.next_token(), Token::Eof);
+    }
+
+    #[test]
+    fn next_token_reconhece_string_com_espaco_e_numero() {
+        // scan_string não filtra por TIPO de caractere (diferente de
+        // scan_number/scan_identifier) -- espaço, dígito, tudo deve entrar
+        // no texto igual, até achar a aspa de fechamento.
+        let mut lexer = Lexer::new("\"idade: 25\"");
+
+        assert_eq!(lexer.next_token(), Token::Str("idade: 25".to_string()));
+        assert_eq!(lexer.next_token(), Token::Eof);
+    }
+
+    #[test]
+    #[should_panic(expected = "string não fechada")]
+    fn next_token_string_sem_fechar_da_panic() {
+        // "ola sem a aspa de fechamento -- scan_string deve chegar no fim
+        // do arquivo (peek() vira None) e reclamar, em vez de devolver um
+        // Token::Str silenciosamente incompleto.
+        let mut lexer = Lexer::new("\"ola");
+        lexer.next_token();
     }
 
     #[test]

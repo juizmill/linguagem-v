@@ -30,6 +30,27 @@ Só depois disso a aula seguinte deve começar. Nunca acumular trabalho de
 mais de uma aula sem commit/PR, e nunca iniciar a próxima aula com
 alterações da aula anterior ainda pendentes.
 
+## Regra de testes (teste primeiro, aluno implementa)
+
+A partir da Aula 09, testes são a garantia contra regressão do projeto — nenhum
+comportamento novo ou combinado com o aluno deve ficar sem teste automatizado.
+
+Fluxo para cada decisão de design/comportamento novo (operador, tipo, regra de
+sintaxe, etc.):
+
+1. A IA escreve o(s) teste(s) que definem o comportamento esperado — casos
+   válidos e casos de erro — ANTES ou junto da implementação, no mesmo estilo
+   e convenção dos testes já existentes no arquivo/crate.
+2. O aluno implementa a solução para fazer esses testes passarem, com a ajuda
+   da IA (perguntas, dicas, revisão — mesma dinâmica de mentor de sempre; ver
+   "Papel da IA" no MASTER.md).
+3. Uma aula não é considerada fechada com testes faltando para o comportamento
+   novo que ela introduziu — rodar `cargo test --workspace` fazendo parte da
+   checagem final antes do commit/PR.
+
+Objetivo: os testes viram a "definição executável" do que foi decidido em
+conversa, e ajudam o aluno a entender o alvo antes de tentar a implementação.
+
 ## Regra do README do projeto
 
 Sempre que uma alteração tornar o `README.md` da raiz do projeto
