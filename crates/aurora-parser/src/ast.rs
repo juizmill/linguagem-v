@@ -3,6 +3,7 @@ pub enum Expr {
     Int(i64),
     Float(f64),
     Ident(String),
+    Str(String),
     Binary {
         left: Box<Expr>,
         op: BinOp,

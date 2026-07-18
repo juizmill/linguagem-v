@@ -97,10 +97,17 @@ Erro: variável 'y' não declarada -- use 'let' antes de atribuir
 - Impressão: `echo expressao;`
 - Números inteiros e ponto flutuante, com promoção automática (`1 + 2.5`
   vira `Float`)
+- Strings, entre aspas duplas: `"texto"` (aspas simples não são suportadas).
+  `+` concatena — se um dos lados não for string, o outro lado é convertido
+  pra texto antes de juntar (`"idade: " + 25` vira `"idade: 25"`); `-`, `*`
+  e `/` envolvendo string são erro recuperável, não panic
 - Operadores aritméticos `+ - * /`, com precedência (`*`/`/` antes de
   `+`/`-`)
+- Escopos aninhados (`Environment` em cadeia pai-filho) — infraestrutura
+  interna, ainda sem sintaxe própria que crie um escopo filho (chega com
+  blocos/funções)
 
-O que ainda falta (escopos, strings, condicionais, laços, funções...) segue
+O que ainda falta (condicionais, laços, funções, tipos compostos...) segue
 o currículo em [`MASTER.md`](MASTER.md).
 
 ## Extensão de arquivo
