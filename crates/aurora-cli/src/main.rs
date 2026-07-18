@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use std::env;
 use std::fs;
 
 use aurora_interpreter::run_program;
+use aurora_interpreter::Environment;
 use aurora_lexer::Lexer;
 use aurora_parser::Parser;
 
@@ -35,7 +35,7 @@ fn main() {
     let tokens = Lexer::new(&source).tokenize();
     let program = Parser::new(tokens).parse_program();
 
-    let mut ambiente = HashMap::new();
+    let mut ambiente = Environment::new();
     match run_program(&program, &mut ambiente) {
         Ok(texto) => texto,
         Err(erro) => {
